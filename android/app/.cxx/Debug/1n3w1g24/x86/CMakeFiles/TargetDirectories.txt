@@ -1,0 +1,2 @@
+/Users/abdoul wahab/Desktop/Project 2/ipren-project/OOPSFARM/android/app/.cxx/Debug/1n3w1g24/x86/CMakeFiles/edit_cache.dir
+/Users/abdoul wahab/Desktop/Project 2/ipren-project/OOPSFARM/android/app/.cxx/Debug/1n3w1g24/x86/CMakeFiles/rebuild_cache.dir

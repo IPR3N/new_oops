@@ -1,0 +1,2 @@
+D:/OOPSFARM/android/app/.cxx/Debug/733hs3k5/x86/CMakeFiles/edit_cache.dir
+D:/OOPSFARM/android/app/.cxx/Debug/733hs3k5/x86/CMakeFiles/rebuild_cache.dir
