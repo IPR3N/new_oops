@@ -10,12 +10,12 @@ class ChatService {
   ChatService._internal();
 
   IO.Socket? socket;
-  // final String baseUrl = 'http://localhost:3000/oopsfarm/api';
-  // final String socketUrl = 'http://localhost:3000';
+  final String baseUrl = 'http://localhost:3000/oopsfarm/api';
+  final String socketUrl = 'http://localhost:3000';
 
-  final String baseUrl =
-      'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
-  final String socketUrl = 'https://oopsfarmback-b3823d9a75eb.herokuapp.com';
+  // final String baseUrl =
+  //     'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
+  // final String socketUrl = 'https://oopsfarmback-b3823d9a75eb.herokuapp.com';
   final AuthService _authService = AuthService();
 
   void initSocket(int userId, Function(Message) onMessageReceived) {

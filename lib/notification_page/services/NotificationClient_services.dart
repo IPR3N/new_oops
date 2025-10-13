@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:new_oppsfarm/notification_page/services/notification_sse_model.dart';
 
 class NotificationClient {
-  final String baseUrl = 'http://167.99.121.244/oopsfarm/api/notifications';
+  // final String baseUrl = 'http://167.99.121.244/oopsfarm/api/notifications';
+  final String baseUrl = 'http://localhost:3000/oopsfarm/api/notifications';
   // final String baseUrl =
   //     'https://ipren-backend-4ece0558c6a1.herokuapp.com/oopsfarm/api/notifications';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();

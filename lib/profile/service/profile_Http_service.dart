@@ -4,10 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 
-// const String apiUrl = 'http://167.99.121.244/oopsfarm/api';
+const String apiUrl = 'http://localhost:3000/oopsfarm/api';
 
-const String apiUrl =
-    'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
+// const String apiUrl =
+//     'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
 
 class ProfileHttpService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();

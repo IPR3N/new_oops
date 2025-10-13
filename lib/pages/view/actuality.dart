@@ -710,6 +710,8 @@ class _ActualityState extends ConsumerState<Actuality> {
   }
 
   void _deletePost(BuildContext context, int postId) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -742,7 +744,7 @@ class _ActualityState extends ConsumerState<Actuality> {
     if (confirm == true) {
       await ref.read(actualityProvider.notifier).deletePost(postId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(AppLocales.getTranslation(
                 'delete_success', ref.read(localeProvider).languageCode)),
@@ -751,6 +753,49 @@ class _ActualityState extends ConsumerState<Actuality> {
       }
     }
   }
+
+  // void _deletePost(BuildContext context, int postId) async {
+  //   final confirm = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: Text(
+  //         AppLocales.getTranslation(
+  //             'confirm_delete', ref.read(localeProvider).languageCode),
+  //       ),
+  //       content: Text(
+  //         AppLocales.getTranslation(
+  //             'delete_post_message', ref.read(localeProvider).languageCode),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: Text(AppLocales.getTranslation(
+  //               'cancel', ref.read(localeProvider).languageCode)),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: Text(
+  //             AppLocales.getTranslation(
+  //                 'delete', ref.read(localeProvider).languageCode),
+  //             style: const TextStyle(color: Colors.red),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   if (confirm == true) {
+  //     await ref.read(actualityProvider.notifier).deletePost(postId);
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text(AppLocales.getTranslation(
+  //               'delete_success', ref.read(localeProvider).languageCode)),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   void _showThemeBottomSheet(BuildContext context) {
     showModalBottomSheet(

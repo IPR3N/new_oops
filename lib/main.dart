@@ -120,7 +120,7 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      navigatorKey: NotificationService.navigatorKey, // Ajouter la clé ici
+      navigatorKey: NotificationService.navigatorKey, 
       title: 'Flutter Demo',
       locale: locale,
       themeMode: themeMode,
