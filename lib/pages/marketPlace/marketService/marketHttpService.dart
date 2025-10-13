@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-const String apiUrl = 'http://localhost:3000/oopsfarm/api';
-// const String apiUrl =
-//     'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
+// const String apiUrl = 'http://10.0.2.2:3000/oopsfarm/api';
+const String apiUrl =
+    'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
 // const String apiUrl =
 //     'https://ipren-backend-4ece0558c6a1.herokuapp.com/oopsfarm/api';
 

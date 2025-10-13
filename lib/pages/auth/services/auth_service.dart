@@ -4,9 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:new_oppsfarm/pages/auth/restaure_password.dart';
 
-const String apiUrl = 'http://localhost:3000/oopsfarm/api/authentication';
+// const String apiUrl = 'http://167.99.121.244/oopsfarm/api/authentication';
+const String apiUrl =
+    'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api/authentication';
+
 // const String apiUrl =
-//     'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api/authentication';
+//     'https://ipren-backend-4ece0558c6a1.herokuapp.com/oopsfarm/api/authentication';
 
 class AuthService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
