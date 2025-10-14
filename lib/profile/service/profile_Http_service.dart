@@ -4,10 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 
-const String apiUrl = 'http://localhost:3000/oopsfarm/api';
+// const String apiUrl = 'http://localhost:3000/oopsfarm/api';
 
-// const String apiUrl =
-//     'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
+const String apiUrl =
+    'https://oopsfarmback-b3823d9a75eb.herokuapp.com/oopsfarm/api';
 
 class ProfileHttpService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -431,4 +431,28 @@ class ProfileHttpService {
           'Failed to unfollow: ${response.statusCode} - ${response.body}');
     }
   }
+
+
+
+
+  // Get posts liked by a user
+Future<String> getLikedPosts(int userId) async {
+  final authToken = await _getToken();
+  if (authToken == null) throw Exception('No authentication token found');
+
+  final response = await http.get(
+    Uri.parse('$apiUrl/oops/liked/$userId'),
+    headers: {
+      HttpHeaders.authorizationHeader: 'Bearer $authToken',
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    return response.body;
+  } else {
+    throw Exception(
+        'Failed to load liked posts: ${response.statusCode} - ${response.body}');
+  }
+}
 }
