@@ -104,45 +104,107 @@ class ActualityNotifier extends StateNotifier<ActualityState> {
     }
   }
 
-  Future<void> _fetchPosts() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final List<dynamic> response = await _httpService.getOopsPost();
-      state = state.copyWith(
-        posts: response.map((data) => OppsModel.fromJson(data)).toList(),
-      );
-    } catch (e) {
-      print('Error fetching posts: $e');
-    } finally {
-      state = state.copyWith(isLoading: false);
+
+
+Future<void> _fetchPosts() async {
+  state = state.copyWith(isLoading: true);
+  try {
+    final List<dynamic> response = await _httpService.getOopsPost();
+    final userId = state.connectedUser?['id'];
+    
+    print('🔍 userId connecté: $userId');
+    
+    // ✅ LOG CRITIQUE : Voir la structure exacte de la réponse
+    if (response.isNotEmpty) {
+      print('📦 RÉPONSE BRUTE du 1er post: ${response[0]}');
+      print('📦 Likes du 1er post: ${response[0]['likes']}');
     }
+    
+    final posts = response.map((data) {
+      final post = OppsModel.fromJson(data, currentUserId: userId);
+      print('📝 Post ${post.id}: likedBy=${post.likedBy}, isLiked=${post.isLiked.value}');
+      return post;
+    }).toList();
+    
+    state = state.copyWith(posts: posts);
+    print('✅ Posts chargés, total: ${posts.length}');
+  } catch (e) {
+    print('❌ Erreur lors du chargement des posts: $e');
+  } finally {
+    state = state.copyWith(isLoading: false);
   }
+}
+
+  // Future<void> _fetchPosts() async {
+  //   state = state.copyWith(isLoading: true);
+  //   try {
+  //     final List<dynamic> response = await _httpService.getOopsPost();
+  //     state = state.copyWith(
+  //       posts: response.map((data) => OppsModel.fromJson(data)).toList(),
+  //     );
+  //   } catch (e) {
+  //     print('Error fetching posts: $e');
+  //   } finally {
+  //     state = state.copyWith(isLoading: false);
+  //   }
+  // }
 
   void _listenForUpdates() {
-    _webSocketService.socket.on('likeUpdated', (data) {
-      final int postId = data['postId'];
-      final int newLikesCount = data['newLikesCount'] ?? data['likeCount'] ?? 0;
-      final List<int> newLikedBy =
-          data['likedBy'] != null ? List<int>.from(data['likedBy']) : [];
+    // _webSocketService.socket.on('likeUpdated', (data) {
+    //   final int postId = data['postId'];
+    //   final int newLikesCount = data['newLikesCount'] ?? data['likeCount'] ?? 0;
+    //   final List<int> newLikedBy =
+    //       data['likedBy'] != null ? List<int>.from(data['likedBy']) : [];
 
-      final index = state.posts.indexWhere((p) => p.id == postId);
-      if (index != -1) {
-        final post = state.posts[index];
-        final updatedPost = post.copyWith(
-          likesCount: ValueNotifier(newLikesCount),
-          likedBy: newLikedBy,
-          likes: newLikedBy.map((id) => Like(userId: id)).toList(),
-          isLiked:
-              ValueNotifier(newLikedBy.contains(state.connectedUser?['id'])),
-        );
-        state = state.copyWith(
-          posts: List.from(state.posts)..[index] = updatedPost,
-        );
-        print(
-            'WebSocket updated post $postId: likesCount=$newLikesCount, likedBy=$newLikedBy');
-      }
-    });
+    //   final index = state.posts.indexWhere((p) => p.id == postId);
+    //   if (index != -1) {
+    //     final post = state.posts[index];
+    //     final updatedPost = post.copyWith(
+    //       likesCount: ValueNotifier(newLikesCount),
+    //       likedBy: newLikedBy,
+    //       likes: newLikedBy.map((id) => Like(userId: id)).toList(),
+    //       isLiked:
+    //           ValueNotifier(newLikedBy.contains(state.connectedUser?['id'])),
+    //     );
+    //     state = state.copyWith(
+    //       posts: List.from(state.posts)..[index] = updatedPost,
+    //     );
+    //     print(
+    //         'WebSocket updated post $postId: likesCount=$newLikesCount, likedBy=$newLikedBy');
+    //   }
+    // });
 
+_webSocketService.socket.on('likeUpdated', (data) {
+  final int postId = data['postId'];
+  final int newLikesCount = data['newLikesCount'] ?? data['likeCount'] ?? 0;
+  final List<int> newLikedBy = data['likedBy'] != null ? List<int>.from(data['likedBy']) : [];
+
+  print('🔄 Événement likeUpdated reçu, postId: $postId, newLikesCount: $newLikesCount, newLikedBy: $newLikedBy');
+
+  final index = state.posts.indexWhere((p) => p.id == postId);
+  if (index != -1) {
+    final post = state.posts[index];
+    final userId = state.connectedUser?['id'];
+    final hasLiked = userId != null && newLikedBy.contains(userId);
+    
+    print('👤 userId: $userId, hasLiked: $hasLiked');
+    
+    final updatedPost = post.copyWith(
+      likesCount: ValueNotifier(newLikesCount),
+      likedBy: newLikedBy,
+      likes: newLikedBy.map((id) => Like(userId: id)).toList(),
+      isLiked: ValueNotifier(hasLiked),
+    );
+    
+    state = state.copyWith(
+      posts: List.from(state.posts)..[index] = updatedPost,
+    );
+    
+    print('✅ Post $postId mis à jour, isLiked: ${updatedPost.isLiked.value}');
+  } else {
+    print('⚠️ Post $postId non trouvé dans state.posts');
+  }
+});
     _webSocketService.socket.on('commentAdded', (data) {
       final int postId = data['postId'];
       final Comment newComment = Comment.fromJson(data['comment']);
@@ -171,82 +233,173 @@ class ActualityNotifier extends StateNotifier<ActualityState> {
       }
     });
 
-    _webSocketService.socket.on('newPostCreated', (data) {
-      print("New post received from server: $data");
-      try {
-        final newPost = OppsModel.fromJson(data);
-        if (!state.posts.any((p) => p.id == newPost.id) &&
-            !state.newPosts.any((p) => p.id == newPost.id)) {
-          final scrollController = _ref.read(scrollControllerProvider);
-          if (scrollController.hasClients && scrollController.offset <= 0) {
-            state = state.copyWith(
-              posts: [newPost, ...state.posts],
-              newPosts: state.newPosts,
-            );
-          } else {
-            state = state.copyWith(
-              newPosts: [...state.newPosts, newPost],
-              showNewPostsNotification: true,
-            );
-          }
-        }
-      } catch (e) {
-        print("Error parsing new post: $e");
+    // _webSocketService.socket.on('newPostCreated', (data) {
+    //   print("New post received from server: $data");
+    //   try {
+    //     final newPost = OppsModel.fromJson(data);
+    //     if (!state.posts.any((p) => p.id == newPost.id) &&
+    //         !state.newPosts.any((p) => p.id == newPost.id)) {
+    //       final scrollController = _ref.read(scrollControllerProvider);
+    //       if (scrollController.hasClients && scrollController.offset <= 0) {
+    //         state = state.copyWith(
+    //           posts: [newPost, ...state.posts],
+    //           newPosts: state.newPosts,
+    //         );
+    //       } else {
+    //         state = state.copyWith(
+    //           newPosts: [...state.newPosts, newPost],
+    //           showNewPostsNotification: true,
+    //         );
+    //       }
+    //     }
+    //   } catch (e) {
+    //     print("Error parsing new post: $e");
+    //   }
+    // });
+
+        _webSocketService.socket.on('newPostCreated', (data) {
+  print("📥 New post received from server: $data");
+  try {
+    final userId = state.connectedUser?['id'];
+    final newPost = OppsModel.fromJson(data, currentUserId: userId);
+    
+    if (!state.posts.any((p) => p.id == newPost.id) &&
+        !state.newPosts.any((p) => p.id == newPost.id)) {
+      final scrollController = _ref.read(scrollControllerProvider);
+      if (scrollController.hasClients && scrollController.offset <= 0) {
+        state = state.copyWith(
+          posts: [newPost, ...state.posts],
+          newPosts: state.newPosts,
+        );
+      } else {
+        state = state.copyWith(
+          newPosts: [...state.newPosts, newPost],
+          showNewPostsNotification: true,
+        );
       }
-    });
+    }
+  } catch (e) {
+    print("❌ Error parsing new post: $e");
+  }
+});
   }
 
-  Future<void> toggleLike(int postId) async {
-    final index = state.posts.indexWhere((p) => p.id == postId);
-    if (index == -1 || state.connectedUser == null) {
-      print('Post not found or user not connected');
-      return;
+  // Future<void> toggleLike(int postId) async {
+  //   final index = state.posts.indexWhere((p) => p.id == postId);
+  //   if (index == -1 || state.connectedUser == null) {
+  //     print('Post not found or user not connected');
+  //     return;
+  //   }
+
+  //   final post = state.posts[index];
+  //   final int userId = state.connectedUser!['id'];
+  //   final bool hasLiked = post.likedBy.contains(userId);
+  //   final bool newLikeStatus = !hasLiked;
+  //   final int newLikesCount = post.likesCount.value + (newLikeStatus ? 1 : -1);
+  //   final List<int> newLikedBy = newLikeStatus
+  //       ? [...post.likedBy, userId]
+  //       : post.likedBy.where((id) => id != userId).toList();
+  //   final List<Like> newLikes = newLikeStatus
+  //       ? [...post.likes, Like(userId: userId)]
+  //       : post.likes.where((like) => like.userId != userId).toList();
+
+  //   // Optimistic update
+  //   state = state.copyWith(
+  //     posts: List.from(state.posts)
+  //       ..[index] = post.copyWith(
+  //         likedBy: newLikedBy,
+  //         likes: newLikes,
+  //         likesCount: ValueNotifier(newLikesCount),
+  //         isLiked: ValueNotifier(newLikeStatus),
+  //       ),
+  //   );
+
+  //   try {
+  //     final success =
+  //         await _httpService.likePost(postId.toString(), userId, newLikeStatus);
+  //     if (!success) {
+  //       throw Exception('Failed to like post');
+  //     }
+  //     _webSocketService.sendLikeUpdate(postId, newLikesCount, newLikedBy);
+  //   } catch (e) {
+  //     // Revert on failure
+  //     state = state.copyWith(
+  //       posts: List.from(state.posts)
+  //         ..[index] = post.copyWith(
+  //           likedBy: post.likedBy,
+  //           likes: post.likes,
+  //           likesCount: ValueNotifier(post.likesCount.value),
+  //           isLiked: ValueNotifier(hasLiked),
+  //         ),
+  //     );
+  //     print('Error toggling like: $e');
+  //   }
+  // }
+
+Future<void> toggleLike(int postId) async {
+  final index = state.posts.indexWhere((p) => p.id == postId);
+  if (index == -1 || state.connectedUser == null) {
+    print('❌ Post not found or user not connected');
+    return;
+  }
+
+  final post = state.posts[index];
+  final int userId = state.connectedUser!['id'];
+  final bool hasLiked = post.likedBy.contains(userId);
+  final bool newLikeStatus = !hasLiked;
+  final int newLikesCount = post.likesCount.value + (newLikeStatus ? 1 : -1);
+  
+  print('👆 AVANT toggle - Post: $postId, userId: $userId');
+  print('👆 hasLiked: $hasLiked, likedBy actuel: ${post.likedBy}');
+  
+  final List<int> newLikedBy = newLikeStatus
+      ? [...post.likedBy, userId]
+      : post.likedBy.where((id) => id != userId).toList();
+  final List<Like> newLikes = newLikeStatus
+      ? [...post.likes, Like(userId: userId)]
+      : post.likes.where((like) => like.userId != userId).toList();
+
+  print('👆 APRÈS calcul - newLikeStatus: $newLikeStatus, newLikedBy: $newLikedBy');
+
+  // Mise à jour optimiste
+  final updatedPost = post.copyWith(
+    likedBy: newLikedBy,
+    likes: newLikes,
+    likesCount: ValueNotifier(newLikesCount),
+    isLiked: ValueNotifier(newLikeStatus),
+  );
+  
+  print('👆 Post mis à jour - isLiked.value: ${updatedPost.isLiked.value}');
+  
+  state = state.copyWith(
+    posts: List.from(state.posts)..[index] = updatedPost,
+  );
+
+  try {
+    print('📤 Envoi au serveur: postId=$postId, userId=$userId, like=$newLikeStatus');
+    final success = await _httpService.likePost(postId.toString(), userId, newLikeStatus);
+    
+    if (!success) {
+      throw Exception('Failed to like post');
     }
-
-    final post = state.posts[index];
-    final int userId = state.connectedUser!['id'];
-    final bool hasLiked = post.likedBy.contains(userId);
-    final bool newLikeStatus = !hasLiked;
-    final int newLikesCount = post.likesCount.value + (newLikeStatus ? 1 : -1);
-    final List<int> newLikedBy = newLikeStatus
-        ? [...post.likedBy, userId]
-        : post.likedBy.where((id) => id != userId).toList();
-    final List<Like> newLikes = newLikeStatus
-        ? [...post.likes, Like(userId: userId)]
-        : post.likes.where((like) => like.userId != userId).toList();
-
-    // Optimistic update
+    
+    print('✅ Serveur a accepté le like');
+    _webSocketService.sendLikeUpdate(postId, newLikesCount, newLikedBy);
+  } catch (e) {
+    print('❌ Erreur serveur: $e');
+    // Revert
     state = state.copyWith(
       posts: List.from(state.posts)
         ..[index] = post.copyWith(
-          likedBy: newLikedBy,
-          likes: newLikes,
-          likesCount: ValueNotifier(newLikesCount),
-          isLiked: ValueNotifier(newLikeStatus),
+          likedBy: post.likedBy,
+          likes: post.likes,
+          likesCount: ValueNotifier(post.likesCount.value),
+          isLiked: ValueNotifier(hasLiked),
         ),
     );
-
-    try {
-      final success =
-          await _httpService.likePost(postId.toString(), userId, newLikeStatus);
-      if (!success) {
-        throw Exception('Failed to like post');
-      }
-      _webSocketService.sendLikeUpdate(postId, newLikesCount, newLikedBy);
-    } catch (e) {
-      // Revert on failure
-      state = state.copyWith(
-        posts: List.from(state.posts)
-          ..[index] = post.copyWith(
-            likedBy: post.likedBy,
-            likes: post.likes,
-            likesCount: ValueNotifier(post.likesCount.value),
-            isLiked: ValueNotifier(hasLiked),
-          ),
-      );
-      print('Error toggling like: $e');
-    }
   }
+}
+
 
   Future<void> sharePost(int postId, String shareContent) async {
     final index = state.posts.indexWhere((p) => p.id == postId);
@@ -1396,6 +1549,61 @@ class _BlogTileState extends State<BlogTile>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+//                             GestureDetector(
+//   onTap: () {
+//     _animationController.forward().then((_) => _animationController.reverse());
+//     widget.onLike();
+//   },
+//   child: Container(
+//     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+//     decoration: BoxDecoration(
+//       color: widget.isLiked
+//           ? (widget.isDarkMode ? Colors.black87 : Colors.white)
+//           : Colors.transparent,
+//       borderRadius: BorderRadius.circular(12),
+//       border: widget.isLiked
+//           ? Border.all(
+//               color: widget.isDarkMode ? Colors.white : Colors.blueAccent,
+//               width: 2.0,
+//             )
+//           : null,
+//       boxShadow: widget.isLiked
+//           ? [
+//               BoxShadow(
+//                 color: widget.isDarkMode ? Colors.white.withOpacity(0.5) : Colors.blueAccent.withOpacity(0.3),
+//                 blurRadius: 6.0,
+//                 spreadRadius: 1.0,
+//                 offset: const Offset(0, 0),
+//               ),
+//             ]
+//           : [],
+//     ),
+//     child: Row(
+//       children: [
+//         ScaleTransition(
+//           scale: _scaleAnimation,
+//           child: Icon(
+//             widget.isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+//             color: widget.isLiked
+//                 ? (widget.isDarkMode ? Colors.white : Colors.black)
+//                 : widget.isDarkMode ? Colors.white70 : Colors.black54,
+//             size: 14,
+//           ),
+//         ),
+//         const SizedBox(width: 6),
+//         Text(
+//           '${widget.likesCount}',
+//           style: TextStyle(
+//             color: widget.isLiked
+//                 ? (widget.isDarkMode ? Colors.white : Colors.black)
+//                 : widget.isDarkMode ? Colors.white70 : Colors.black54,
+//             fontSize: 12,
+//           ),
+//         ),
+//       ],
+//     ),
+//   ),
+// ),
                     GestureDetector(
                       onTap: () {
                         _animationController.forward().then(
