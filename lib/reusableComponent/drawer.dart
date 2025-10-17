@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:new_oppsfarm/core/color.dart';
@@ -31,6 +32,52 @@ class CustomDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider).languageCode;
 
+    // Débogage détaillé de connectedUser
+    print('🔍 Structure de connectedUser: $connectedUser');
+
+    String? profilePhoto;
+    try {
+      // Essayer directement proofile
+      profilePhoto = connectedUser?['proofile']?['photoProfile'] as String?;
+      print('🖼️ Essai proofile: photoProfile=$profilePhoto');
+
+      // Fallback sur profile
+      if (profilePhoto == null || profilePhoto.isEmpty) {
+        profilePhoto = connectedUser?['profile']?['photoProfile'] as String?;
+        print('🖼️ Essai profile: photoProfile=$profilePhoto');
+      }
+
+      // Fallback sur user.proofile (cas où connectedUser est imbriqué)
+      if (profilePhoto == null || profilePhoto.isEmpty) {
+        profilePhoto = connectedUser?['user']?['proofile']?['photoProfile'] as String?;
+        print('🖼️ Essai user.proofile: photoProfile=$profilePhoto');
+      }
+
+      // Fallback sur user.profile
+      if (profilePhoto == null || profilePhoto.isEmpty) {
+        profilePhoto = connectedUser?['user']?['profile']?['photoProfile'] as String?;
+        print('🖼️ Essai user.profile: photoProfile=$profilePhoto');
+      }
+
+      // Vérifier si connectedUser est mal formé
+      if (connectedUser == null) {
+        print('⚠️ connectedUser est null');
+      } else if (connectedUser['proofile'] == null &&
+                 connectedUser['profile'] == null &&
+                 connectedUser['user']?['proofile'] == null &&
+                 connectedUser['user']?['profile'] == null) {
+        print('⚠️ Aucune clé proofile ou profile trouvée dans connectedUser');
+      }
+    } catch (e) {
+      print('❌ Erreur lors de l’extraction de photoProfile: $e');
+    }
+
+    const defaultImage = 'https://picsum.photos/id/1015/500/300';
+    final displayImage = (profilePhoto != null && profilePhoto.isNotEmpty)
+        ? profilePhoto
+        : defaultImage;
+    print('🖼️ Image affichée: $displayImage');
+
     return Drawer(
       backgroundColor: backgroundColor,
       child: Column(
@@ -41,11 +88,11 @@ class CustomDrawer extends ConsumerWidget {
               children: [
                 UserAccountsDrawerHeader(
                   accountName: Text(
-                    "${connectedUser?['nom']} ${connectedUser?['prenom']}"
+                    "${connectedUser?['nom'] ?? connectedUser?['user']?['nom'] ?? 'Inconnu'} ${connectedUser?['prenom'] ?? connectedUser?['user']?['prenom'] ?? ''}"
                         .trim(),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  accountEmail: Text(connectedUser?['email'] ?? ''),
+                  accountEmail: Text(connectedUser?['email'] ?? connectedUser?['user']?['email'] ?? 'Aucun email'),
                   currentAccountPicture: GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -53,8 +100,15 @@ class CustomDrawer extends ConsumerWidget {
                         MaterialPageRoute(
                           builder: (context) => ProfilePage(
                             connectedUser: {
-                              ...connectedUser,
-                              "profile": connectedUser["profile"] ?? {},
+                              "id": connectedUser?['id'] ?? connectedUser?['user']?['id'] ?? 0,
+                              "nom": connectedUser?['nom'] ?? connectedUser?['user']?['nom'] ?? '',
+                              "prenom": connectedUser?['prenom'] ?? connectedUser?['user']?['prenom'] ?? '',
+                              "email": connectedUser?['email'] ?? connectedUser?['user']?['email'] ?? '',
+                              "profile": connectedUser?['proofile'] ??
+                                  connectedUser?['profile'] ??
+                                  connectedUser?['user']?['proofile'] ??
+                                  connectedUser?['user']?['profile'] ??
+                                  {},
                             },
                           ),
                         ),
@@ -62,28 +116,32 @@ class CustomDrawer extends ConsumerWidget {
                     },
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10.0),
-                      child: Image.network(
-                        connectedUser?['profile']?['photoProfile']
-                                    ?.isNotEmpty ==
-                                true
-                            ? connectedUser['profile']['photoProfile']
-                            : 'https://picsum.photos/id/1015/500/300',
+                      child: CachedNetworkImage(
+                        imageUrl: displayImage,
                         height: 50,
                         width: 50,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Image.network(
-                            'https://picsum.photos/id/1015/500/300',
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        errorWidget: (context, url, error) {
+                          print('❌ Erreur chargement image: $error');
+                          return CachedNetworkImage(
+                            imageUrl: defaultImage,
                             height: 50,
                             width: 50,
                             fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            errorWidget: (context, url, error) => const Icon(Icons.error),
                           );
                         },
                       ),
                     ),
                   ),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[850] : green,
+                    color: isDarkMode ? Colors.grey[850] : green, // Utilise greenColor
                   ),
                 ),
                 ListTile(
@@ -95,8 +153,15 @@ class CustomDrawer extends ConsumerWidget {
                       MaterialPageRoute(
                         builder: (context) => ProfilePage(
                           connectedUser: {
-                            ...connectedUser,
-                            "profile": connectedUser["profile"] ?? {},
+                            "id": connectedUser?['id'] ?? connectedUser?['user']?['id'] ?? 0,
+                            "nom": connectedUser?['nom'] ?? connectedUser?['user']?['nom'] ?? '',
+                            "prenom": connectedUser?['prenom'] ?? connectedUser?['user']?['prenom'] ?? '',
+                            "email": connectedUser?['email'] ?? connectedUser?['user']?['email'] ?? '',
+                            "profile": connectedUser?['proofile'] ??
+                                connectedUser?['profile'] ??
+                                connectedUser?['user']?['proofile'] ??
+                                connectedUser?['user']?['profile'] ??
+                                {},
                           },
                         ),
                       ),
@@ -114,8 +179,7 @@ class CustomDrawer extends ConsumerWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.exit_to_app,
-                      color: Colors.red, size: 20),
+                  leading: const Icon(Icons.exit_to_app, color: Colors.red, size: 20),
                   title: Text(AppLocales.getTranslation('logout', locale)),
                   onTap: () {
                     Navigator.pop(context);
@@ -127,8 +191,7 @@ class CustomDrawer extends ConsumerWidget {
           ),
           const Divider(),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
