@@ -1073,15 +1073,7 @@ class _ProjectDetailsState extends ConsumerState<ProjectDetails>
               );
             },
           ),
-          // IconButton(
-          //   icon: Icon(Icons.message_rounded, color: green),
-          //   tooltip: AppLocales.getTranslation('add_media', locale),
-          //   onPressed: () {
-          //     Navigator.push(context,
-          //         MaterialPageRoute(builder: (context) => GroupMessage()));
-          //   },
-          // ),
-          // const SizedBox(width: 10),
+       
         ],
       ),
       body: SafeArea(
